@@ -1,0 +1,41 @@
+# {{ProjectTitle}} 
+- - -
+
+## Description
+{{Description}}
+
+## Deployment
+Deployed at:  
+`{{DeploymentLocation}}`
+
+## Library
+
+| Function Name | Description                        |
+| ------------- | ---------------------------------- |
+{{*ForEach(Methods)}}
+| `{{Method.Identifier}}({{Method.ArgsList}})` | {{Method.Description}} |
+{{*EndForEach}}
+
+### Methods
+{{*ForEach(Methods)}}
+#### {{Method.Identifier}({{Method.ArgsList}})
+{{Method.Description}}
+
+##### Syntax
+	{{Method.Syntax}}
+
+##### Parameters
+| Name | Type | Description                |
+| ---- | ---- | -------------------------- |
+{{*ForEach(Method.Args)}}
+| {{Arg.Identifer}} | `{{Arg.Type}}` | {{Arg.Description}} |
+{{*EndForEach}}
+
+##### Return Value
+Type: {{Method.ReturnType}}
+Example:
+```
+{{Method.ReturnExample}}
+```
+---
+{{*EndForEach}}
