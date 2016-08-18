@@ -2,6 +2,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
 using MarkdownGenerator.Templating;
+using System.Text.RegularExpressions;
 
 namespace MarkdownGenerator.Tests.Templating
 {
@@ -70,7 +71,53 @@ namespace MarkdownGenerator.Tests.Templating
             var emitter = new TemplateEmitter(template);
             var result = emitter.Compile();
 
-            Assert.AreEqual(iterativeCompiledTemplate, result);
+            var normalisedExpectation = Regex.Replace(iterativeCompiledTemplate, @"\s", "");
+            var normalisedResult = Regex.Replace(result, @"\s", "");
+            Assert.IsTrue(string.Equals(normalisedExpectation, normalisedResult, StringComparison.OrdinalIgnoreCase));
+        }
+
+        string complexIterativeTemplate = @"
+{{PlaceholderA}}
+{{*ForEach(IterativePlaceholder)}}
+Title: {{Title}}
+Subtitle: {{Subtitle}}
+{{/EndForEach}}
+{{PlaceholderB}}
+";
+        IDictionary<string, object> complexIterativeVals = new Dictionary<string, object>
+        {
+            { "PlaceholderA", "Complex Iterative Test" },
+            { "PlaceholderB", "Complex Iterative Test End" },
+            { "IterativePlaceholder", new object[]
+            {
+                new { Title = "Test 1", Subtitle = "Subtitle 1" },
+                new { Title = "Test 2", Subtitle = "Subtitle 2" },
+                new { Title = "Test 3", Subtitle = "Subtitle 3" }
+            } }
+        };
+        string complexIterativeCompiledTemplate = @"
+Complex Iterative Test
+Title: Test 1
+Subtitle: Subtitle 1
+Title: Test 2
+Subtitle: Subtitle 2
+Title: Test 3
+Subtitle: Subtitle 3
+Complex Iterative Test End
+";
+        [TestMethod]
+        public void ComplexTemplateWithIterationCompilesSuccessfully()
+        {
+            var template = new Template(complexIterativeTemplate);
+            foreach (var kvp in complexIterativeVals)
+            {
+                template.Values.Add(kvp);
+            }
+
+            var emitter = new TemplateEmitter(template);
+            var result = emitter.Compile();
+
+            Assert.AreEqual(complexIterativeCompiledTemplate, result);
         }
     }
 }
