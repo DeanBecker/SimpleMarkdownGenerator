@@ -11,19 +11,14 @@ namespace MarkdownGenerator.Templating
         private const string _startingPlaceholder = "{{";
         private const string _endingPlaceholder = "}}";
 
-        public Template()
-        {
-            Values = new Dictionary<string, object>();
-        }
-
-        public Template(string template)
-            : this()
+        public Template(string template, object data)
         {
             Text = template;
+            Data = data;
         }
 
         public string Text { get; set; }
-        public IDictionary<string, object> Values { get; }
+        public object Data { get; }
 
         public string Placeholder
         {

@@ -17,7 +17,7 @@ namespace MarkdownGenerator.Templating
             _template = template;
         }
 
-        private string RegexPattern
+        private string PlaceholderPattern
         {
             get
             {
@@ -38,89 +38,110 @@ namespace MarkdownGenerator.Templating
 
         public string Compile()
         {
-            offset = 0;
-            string result = InnerCompile(_template.Text);
+            string result = InnerCompile(_template.Text, _template.Data);
             return result;
         }
 
-        private int offset = 0;
-        private string InnerCompile(string text, string prefix = null)
+        private string InnerCompile(string template, dynamic data)
         {
-            Stack<Match> Nesting = new Stack<Match>();
+            var result = template;
+            var placeholders = Regex.Matches(result, PlaceholderPattern);
+            int offset = 0;
+            var indentStack = new Stack<Match>();
+            int maxStack = 0;
+            var indentPairs = new List<Tuple<Match, Match>>();
 
-            var result = text;
-            var placeholders = Regex.Matches(result, RegexPattern);
-            for (int i = 0; i < placeholders.Count; i++)
+            foreach (Match placeholder in placeholders)
             {
-                var match = placeholders[i];
-
-                var key = match.Value.Replace("{", string.Empty).Replace("}", string.Empty);
-
+                var key = placeholder.Value.Replace("{", string.Empty).Replace("}", string.Empty);
                 switch (key.First())
                 {
-                    case '*':
-                        Nesting.Push(match); // Start of block
+                    case '*': // Start of block
+                        indentStack.Push(placeholder);
                         break;
-
-                    case '/':
-                        var poppedMatch = Nesting.Pop(); // End of block
-                        int poppedIndex = poppedMatch.Index - offset, endIndex = match.Index - offset;
-                        var startOfBlock = poppedIndex;
-                        var endOfBlock = endIndex + match.Length;
-                        var innerText = result.Substring(startOfBlock + poppedMatch.Length, endIndex - (startOfBlock + poppedMatch.Length)).Trim();
-
-                        result = result.Remove(startOfBlock, endOfBlock - startOfBlock);
-
-                        const string methodParametersPattern = @"\([^)]+\)";
-                        var methodParameters = Regex.Match(poppedMatch.Value, methodParametersPattern).Value?
-                                                    .Replace("(", string.Empty).Replace(")", string.Empty);
-                        if (methodParameters == null)
-                            throw new ArgumentException($"Malformed construct: {poppedMatch.Value} : {poppedMatch.Index}");
-                        result = result.Insert(startOfBlock, InnerCompile(innerText, methodParameters)); // Recurse to resolve loops
+                    case '/': // End of block
+                        indentPairs.Add(new Tuple<Match, Match>(indentStack.Pop(), placeholder));
+                        maxStack++;
                         break;
-
                     default:
-                        if (Nesting.Count == 0)
+                        if (indentStack.Count() == 0)
                         {
-                            // Perform subsitution on top-level placeholders
-                            object val;
-                            if (!_template.Values.TryGetValue(prefix ?? key, out val))
-                                continue;
-
-                            if (prefix != null)
+                            string value;
+                            if (key.Equals("Value"))
                             {
-                                var enumerableVal = (IEnumerable)val;
-                                var replacementText = new StringBuilder();
-                                foreach (var e in enumerableVal)
-                                {
-                                    if (match.Value == this.DefaultValue)
-                                    {
-                                        replacementText.AppendLine(e.ToString());
-                                    }
-                                    else
-                                    {
-                                        // Parse complex object
-                                        //TODO: Major refactor to be able to compile sub-templates as a whole
-                                    }
-                                }
-                                const string newLine = "\r\n";
-                                replacementText.Remove(replacementText.Length - newLine.Length, newLine.Length);
-                                result = result.Replace(match.Value, replacementText.ToString());
-                                offset += (match.Value.Length - replacementText.Length);
+                                value = data.ToString();
                             }
                             else
                             {
-                                result = result.Replace(match.Value, val.ToString());
+                                value = data.GetType().GetProperty(key).GetValue(data).ToString();
+                            }
+                            result = result.Replace(placeholder.Value, value); //BUG: Replaces occurences out of scope, too.
+                            if (maxStack == 0)
+                            {
                                 // Keep offset caused by changes in length of replaced text
                                 // to save recalculating Regex after every change.
-                                offset += (match.Value.Length - val.ToString().Length);
+                                offset += (placeholder.Value.Length - value.Length);
                             }
                         }
                         break;
                 }
             }
 
+            var mostOuterBlock = indentPairs.LastOrDefault();
+            if (mostOuterBlock != null)
+            {
+                const string methodParametersPattern = @"\([^)]+\)";
+                var methodParameters = Regex.Match(mostOuterBlock.Item1.Value, methodParametersPattern).Value?
+                                            .Replace("(", string.Empty).Replace(")", string.Empty);
+
+                var enumerable = data.GetType().GetProperty(methodParameters).GetValue(data);
+                if (enumerable is IEnumerable)
+                {
+                    var block = GetBlockInfo(mostOuterBlock.Item1, mostOuterBlock.Item2, offset);
+                    var innerResult = new StringBuilder();
+                    var innerContent = result.Substring(block.ContentStart, block.ContentLength).TrimStart();
+                    foreach (var d in enumerable)
+                    {
+                        var r = InnerCompile(innerContent, d); // Recurse to resolve inner blocks
+                        innerResult.Append(r);
+                    }
+                    var trimmedInnerResult = innerResult.ToString().TrimEnd();
+                    result = result.Insert(block.End, trimmedInnerResult);
+                    result = result.Remove(block.Start, block.Length);
+                    offset += block.Length - trimmedInnerResult.Length;
+                }
+            }
+
             return result;
+        }
+
+        private struct BlockInfo
+        {
+            public int Start;
+            public int End;
+            public int Length;
+            public int ContentStart;
+            public int ContentEnd;
+            public int ContentLength;
+            public int Offset;
+        }
+
+        private static BlockInfo GetBlockInfo(Match startTag, Match endTag, int offset = 0)
+        {
+            var info = new BlockInfo()
+            {
+                Offset = offset
+            };
+
+            info.Start = startTag.Index - offset;
+            info.ContentEnd = endTag.Index - offset;
+            info.End = info.ContentEnd + endTag.Length;
+            info.ContentStart = info.Start + startTag.Length;
+
+            info.Length = info.End - info.Start;
+            info.ContentLength = info.ContentEnd - info.ContentStart;
+
+            return info;
         }
     }
 }

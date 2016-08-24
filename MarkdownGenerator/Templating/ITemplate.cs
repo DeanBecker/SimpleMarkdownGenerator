@@ -6,7 +6,7 @@ namespace MarkdownGenerator.Templating
     {
         string Placeholder { get; }
         string Text { get; set; }
-        IDictionary<string, object> Values { get; }
+        object Data { get; }
 
         string WrapToken(string token);
     }

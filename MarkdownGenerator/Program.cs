@@ -29,7 +29,7 @@ namespace MarkdownGenerator
                 var rawTemplate = File.ReadAllText(tFile);
                 var code = File.ReadAllText(cFile);
 
-                var template = new Template(rawTemplate);
+                var template = new Template(rawTemplate, new object());
 
                 var parser = new CSharpParser(code);
                 var methods = parser.GetMethods();
