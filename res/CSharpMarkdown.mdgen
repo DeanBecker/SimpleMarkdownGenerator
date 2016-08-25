@@ -12,30 +12,30 @@ Deployed at:
 
 | Function Name | Description                        |
 | ------------- | ---------------------------------- |
-{{*ForEach(Methods)}}
-| `{{Method.Identifier}}({{Method.ArgsList}})` | {{Method.Description}} |
-{{*EndForEach}}
+{{*(Methods)}}
+| `{{Identifier}}({{ArgsList}})` | {{Description}} |
+{{/}}
 
 ### Methods
-{{*ForEach(Methods)}}
-#### {{Method.Identifier}({{Method.ArgsList}})
-{{Method.Description}}
+{{*(Methods)}}
+#### {{Identifier}}({{ArgsList}})
+{{Description}}
 
 ##### Syntax
-	{{Method.Syntax}}
+	{{Syntax}}
 
 ##### Parameters
 | Name | Type | Description                |
 | ---- | ---- | -------------------------- |
-{{*ForEach(Method.Args)}}
-| {{Arg.Identifer}} | `{{Arg.Type}}` | {{Arg.Description}} |
-{{*EndForEach}}
+{{*(Args)}}
+| {{Identifier}} | `{{Type}}` | {{Description}} |
+{{/}}
 
 ##### Return Value
-Type: {{Method.ReturnType}}
+Type: {{ReturnType}}
 Example:
 ```
-{{Method.ReturnExample}}
+{{ReturnExample}}
 ```
 ---
-{{*EndForEach}}
+{{/}}

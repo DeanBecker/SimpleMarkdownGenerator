@@ -60,7 +60,9 @@ namespace MarkdownGenerator.Templating
                         indentStack.Push(placeholder);
                         break;
                     case '/': // End of block
-                        indentPairs.Add(new Tuple<Match, Match>(indentStack.Pop(), placeholder));
+                        var startTag = indentStack.Pop();
+                        if (indentStack.Count() == 0)
+                            indentPairs.Add(new Tuple<Match, Match>(startTag, placeholder));
                         maxStack++;
                         break;
                     default:
@@ -73,7 +75,9 @@ namespace MarkdownGenerator.Templating
                             }
                             else
                             {
-                                value = data.GetType().GetProperty(key).GetValue(data).ToString();
+                                value = data.GetType().GetProperty(key)?.GetValue(data).ToString();
+                                if (value == null)
+                                    continue;
                             }
                             result = result.Replace(placeholder.Value, value, placeholder.Index - offset, placeholder.Length);
                             if (maxStack == 0)
@@ -87,8 +91,7 @@ namespace MarkdownGenerator.Templating
                 }
             }
 
-            var mostOuterBlock = indentPairs.LastOrDefault();
-            if (mostOuterBlock != null)
+            foreach (var mostOuterBlock in indentPairs)
             {
                 const string methodParametersPattern = @"\([^)]+\)";
                 var methodParameters = Regex.Match(mostOuterBlock.Item1.Value, methodParametersPattern).Value?

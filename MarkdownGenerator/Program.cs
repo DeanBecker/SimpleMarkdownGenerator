@@ -27,19 +27,36 @@ namespace MarkdownGenerator
             try
             {
                 var rawTemplate = File.ReadAllText(tFile);
+                var codeFile = new FileInfo(cFile);
                 var code = File.ReadAllText(cFile);
-
-                var template = new Template(rawTemplate, new object());
 
                 var parser = new CSharpParser(code);
                 var methods = parser.GetMethods();
-                foreach (var method in methods)
+
+                var data = new
                 {
-                    Console.WriteLine($"Method: {method.Identifier}");
-                    Console.WriteLine($"Args: {string.Join<ParameterSyntax>(", ", method.ParameterList.Parameters.ToArray())}");
-                    Console.WriteLine($"Returns: {method.ReturnType.ToString()}");
-                    Console.WriteLine();
-                }
+                    ProjectTitle = codeFile.Name,
+                    Methods = methods.Select(m => new
+                    {
+                        Identifier = m.Identifier.ToString(),
+                        ArgsList = string.Join<ParameterSyntax>(", ", m.ParameterList.Parameters.ToArray()),
+                        Args = m.ParameterList.Parameters.Select(p => new { Identifier = p.Identifier.Value, Type = p.Type.ToString() }),
+                        ReturnType = m.ReturnType.ToString()
+                    })
+                };
+
+                var template = new Template(rawTemplate, data);
+                var emitter = new TemplateEmitter(template);
+
+                var compiledTemplate = emitter.Compile();
+
+                if (!Directory.Exists("docs"))
+                    Directory.CreateDirectory("docs");
+                var output = File.CreateText($"docs\\{codeFile.Name}.md");
+                output.Write(compiledTemplate);
+                output.FlushAsync();
+
+                Console.WriteLine($"Documentation compiled for {codeFile.Name}");
             }
             catch (Exception ex)
             {
