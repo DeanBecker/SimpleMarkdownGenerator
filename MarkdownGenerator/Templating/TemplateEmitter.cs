@@ -44,8 +44,8 @@ namespace MarkdownGenerator.Templating
 
         private string InnerCompile(string template, dynamic data)
         {
-            var result = template;
-            var placeholders = Regex.Matches(result, PlaceholderPattern);
+            var result = new StringBuilder(template);
+            var placeholders = Regex.Matches(template, PlaceholderPattern);
             int offset = 0;
             var indentStack = new Stack<Match>();
             int maxStack = 0;
@@ -75,7 +75,7 @@ namespace MarkdownGenerator.Templating
                             {
                                 value = data.GetType().GetProperty(key).GetValue(data).ToString();
                             }
-                            result = result.Replace(placeholder.Value, value); //BUG: Replaces occurences out of scope, too.
+                            result = result.Replace(placeholder.Value, value, placeholder.Index - offset, placeholder.Length);
                             if (maxStack == 0)
                             {
                                 // Keep offset caused by changes in length of replaced text
@@ -99,7 +99,7 @@ namespace MarkdownGenerator.Templating
                 {
                     var block = GetBlockInfo(mostOuterBlock.Item1, mostOuterBlock.Item2, offset);
                     var innerResult = new StringBuilder();
-                    var innerContent = result.Substring(block.ContentStart, block.ContentLength).TrimStart();
+                    var innerContent = result.ToString(block.ContentStart, block.ContentLength).TrimStart();
                     foreach (var d in enumerable)
                     {
                         var r = InnerCompile(innerContent, d); // Recurse to resolve inner blocks
@@ -112,7 +112,7 @@ namespace MarkdownGenerator.Templating
                 }
             }
 
-            return result;
+            return result.ToString();
         }
 
         private struct BlockInfo

@@ -9,20 +9,20 @@ namespace MarkdownGenerator.Tests.Parser
     public class CSharpParserTests
     {
         private string validCode = @"
-        using System;
+            using System;
         
-        namespace TestApplication
-        {
-            public class MyTestClass
+            namespace TestApplication
             {
-                public MyTestClass(string arg1) { }
-                public void MyTestMethod() { // Comments }
-                public int MyTestComplexMethod(int a, int b)
+                public class MyTestClass
                 {
-                    return a + b;
+                    public MyTestClass(string arg1) { }
+                    public void MyTestMethod() { /* Comments */ }
+                    public int MyTestComplexMethod(int a, int b)
+                    {
+                        return a + b;
+                    }
                 }
             }
-        }
         ";
 
         [TestMethod]
