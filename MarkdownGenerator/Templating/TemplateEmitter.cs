@@ -69,7 +69,7 @@ namespace MarkdownGenerator.Templating
                         if (indentStack.Count() == 0)
                         {
                             string value;
-                            if (key.Equals("Value"))
+                            if (placeholder.Value.Equals(this.DefaultValue))
                             {
                                 value = data.ToString();
                             }
